@@ -1,45 +1,78 @@
 -- ============================================================
--- 小黑鱼 UI · 圣奥里专属 · 完整版 A7
+-- 🐟 小黑鱼 UI · 圣奥里专属 · 完整版 A7（优化版）
 -- ============================================================
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local VirtualInputManager = game:GetService("VirtualInputManager")
+-- 模块：初始化 / 日志 / 战斗 / 生存 / 破解 / 刷钱 / 交通 / 车辆 / 娱乐
+--      传送 / DLC / 检测 / 圣奥里 / 公告 / 通用
+-- 卡密：公益版（随便输都能进）
+-- 防封：A6（隐蔽平滑 + 假移动 + 反踢 + 反检测 + 速度限制 + 传送冷却 + 落点校验）
+-- 检测：A7（Kick / Remote / 脚本 / 速度 / 传送 / 血量 / 标记 + 紧急熔断）
+-- DLC：ESP 透视 + 车辆飞行跳跃 + 子弹 + 更多刷钱职业
+-- ============================================================
 
-local player = Players.LocalPlayer
+-- ============================================================
+-- [ 1 ] 服务引用
+-- ============================================================
+local Players              = game:GetService("Players")
+local TweenService         = game:GetService("TweenService")
+local UserInputService     = game:GetService("UserInputService")
+local RunService           = game:GetService("RunService")
+local ReplicatedStorage    = game:GetService("ReplicatedStorage")
+local VirtualInputManager  = game:GetService("VirtualInputManager")
+local CoreGui              = game:GetService("CoreGui")
+
+local player    = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
-local BRAND_NAME = "小黑鱼"
+
+-- ============================================================
+-- [ 2 ] 全局常量
+-- ============================================================
+local BRAND_NAME       = "小黑鱼"
 local CURRENT_PLACE_ID = game.PlaceId
-local SAINT_PLACE_ID = 104841616983113
+local SAINT_PLACE_ID   = 104841616983113
+
 local buildDefaultUI
 local buildSaintUI
 
+-- UI 配置
 local CONFIG = {
-    WINDOW_SIZE = UDim2.new(0, 620, 0, 420),
-    SIDEBAR_WIDTH = 150,
-    MINIMIZED_SIZE = UDim2.new(0, 200, 0, 40),
-    HEADER_HEIGHT = 40,
-    GLASS_TRANSPARENCY = 0.35,
-    GLASS_COLOR = Color3.fromRGB(20, 20, 30),
-    ACCENT_COLOR = Color3.fromRGB(120, 80, 255),
-    TWEEN_TIME = 0.25,
-    NORMAL_RADIUS = UDim.new(0, 12),
-    PILL_RADIUS = UDim.new(1, 0),
+    WINDOW_SIZE         = UDim2.new(0, 620, 0, 420),
+    SIDEBAR_WIDTH       = 150,
+    MINIMIZED_SIZE      = UDim2.new(0, 200, 0, 40),
+    HEADER_HEIGHT       = 40,
+    GLASS_TRANSPARENCY  = 0.35,
+    GLASS_COLOR         = Color3.fromRGB(20, 20, 30),
+    ACCENT_COLOR        = Color3.fromRGB(120, 80, 255),
+    TWEEN_TIME          = 0.25,
+    NORMAL_RADIUS       = UDim.new(0, 12),
+    PILL_RADIUS         = UDim.new(1, 0),
 }
+
+-- 手机图标屏幕位置（比例 0~1，需要按自己屏幕调）
 local PHONE_POS_X = 0.85
 local PHONE_POS_Y = 0.35
 
+-- ============================================================
+-- [ 3 ] 日志模块
+-- ============================================================
 local Log = {
-    lines = {}, label = nil, maxLines = 200,
+    lines = {},
+    label = nil,
+    maxLines = 200,
     colors = {
-        green=Color3.fromRGB(120,255,160), red=Color3.fromRGB(255,100,100),
-        yellow=Color3.fromRGB(255,220,100), blue=Color3.fromRGB(120,180,255),
-        gray=Color3.fromRGB(160,160,180), white=Color3.fromRGB(230,230,240),
+        green  = Color3.fromRGB(120, 255, 160),
+        red    = Color3.fromRGB(255, 100, 100),
+        yellow = Color3.fromRGB(255, 220, 100),
+        blue   = Color3.fromRGB(120, 180, 255),
+        gray   = Color3.fromRGB(160, 160, 180),
+        white  = Color3.fromRGB(230, 230, 240),
     },
 }
-function Log.setLabel(lbl) Log.label = lbl; Log.refresh() end
+
+function Log.setLabel(lbl)
+    Log.label = lbl
+    Log.refresh()
+end
+
 function Log.refresh()
     if not Log.label then return end
     Log.label.Text = table.concat(Log.lines, "\n")
@@ -48,16 +81,29 @@ function Log.refresh()
         p.CanvasPosition = Vector2.new(0, math.max(0, Log.label.AbsoluteSize.Y - p.AbsoluteSize.Y + 20))
     end
 end
+
 function Log.add(text, colorName)
     local c = Log.colors[colorName or "white"] or Log.colors.white
-    local hex = string.format("#%02X%02X%02X", math.floor(c.R*255+.5), math.floor(c.G*255+.5), math.floor(c.B*255+.5))
+    local hex = string.format("#%02X%02X%02X",
+        math.floor(c.R * 255 + 0.5),
+        math.floor(c.G * 255 + 0.5),
+        math.floor(c.B * 255 + 0.5))
     local ts = os.date("%H:%M:%S")
     table.insert(Log.lines, string.format("[%s] <font color=\"%s\">%s</font>", ts, hex, text))
-    if #Log.lines > Log.maxLines then table.remove(Log.lines, 1) end
+    if #Log.lines > Log.maxLines then
+        table.remove(Log.lines, 1)
+    end
     Log.refresh()
 end
-function Log.clear() Log.lines = {}; Log.refresh() end
 
+function Log.clear()
+    Log.lines = {}
+    Log.refresh()
+end
+
+-- ============================================================
+-- [ 4 ] ScreenGui 根容器
+-- ============================================================
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "XiaoHeiYuUI"
 screenGui.ResetOnSpawn = false
@@ -66,6 +112,7 @@ screenGui.Parent = playerGui
 
 local uiScale = Instance.new("UIScale")
 uiScale.Parent = screenGui
+
 local function updateScale()
     local vp = workspace.CurrentCamera.ViewportSize
     uiScale.Scale = math.clamp(vp.X / 1280, 0.7, 1.4)
@@ -73,6 +120,9 @@ end
 updateScale()
 workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateScale)
 
+-- ============================================================
+-- [ 5 ] 卡密界面
+-- ============================================================
 local authOverlay = Instance.new("Frame")
 authOverlay.Size = UDim2.new(1, 0, 1, 0)
 authOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
@@ -165,6 +215,9 @@ authBtn.ZIndex = 502
 authBtn.Parent = authCard
 Instance.new("UICorner", authBtn).CornerRadius = UDim.new(0, 8)
 
+-- ============================================================
+-- [ 6 ] 主窗口框架
+-- ============================================================
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
 mainFrame.Size = CONFIG.WINDOW_SIZE
@@ -194,6 +247,9 @@ glassStroke.Transparency = 0.85
 glassStroke.Thickness = 1
 glassStroke.Parent = glassBg
 
+-- ============================================================
+-- [ 7 ] 顶栏
+-- ============================================================
 local header = Instance.new("Frame")
 header.Size = UDim2.new(1, 0, 0, CONFIG.HEADER_HEIGHT)
 header.BackgroundTransparency = 1
@@ -248,6 +304,9 @@ closeBtn.Font = Enum.Font.GothamBold
 closeBtn.ZIndex = 6
 closeBtn.Parent = header
 
+-- ============================================================
+-- [ 8 ] 侧边栏
+-- ============================================================
 local sidebar = Instance.new("ScrollingFrame")
 sidebar.Name = "Sidebar"
 sidebar.Size = UDim2.new(0, CONFIG.SIDEBAR_WIDTH, 1, -CONFIG.HEADER_HEIGHT)
@@ -284,6 +343,9 @@ sidebarDivider.BorderSizePixel = 0
 sidebarDivider.ZIndex = 5
 sidebarDivider.Parent = mainFrame
 
+-- ============================================================
+-- [ 9 ] 内容区
+-- ============================================================
 local contentArea = Instance.new("Frame")
 contentArea.Size = UDim2.new(1, -CONFIG.SIDEBAR_WIDTH, 1, -CONFIG.HEADER_HEIGHT)
 contentArea.Position = UDim2.new(0, CONFIG.SIDEBAR_WIDTH, 0, CONFIG.HEADER_HEIGHT)
@@ -311,6 +373,9 @@ contentPadding.PaddingLeft = UDim.new(0, 4)
 contentPadding.PaddingRight = UDim.new(0, 4)
 contentPadding.Parent = contentScroll
 
+-- ============================================================
+-- [ 10 ] 公告弹窗
+-- ============================================================
 local noticePanel = Instance.new("Frame")
 noticePanel.Size = UDim2.new(1, -32, 0, 200)
 noticePanel.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -363,7 +428,11 @@ noticeClose.Parent = noticePanel
 noticeClose.Activated:Connect(function() noticePanel.Visible = false end)
 noticeBtn.Activated:Connect(function() noticePanel.Visible = not noticePanel.Visible end)
 
+-- ============================================================
+-- [ 11 ] 窗口拖动 / 最小化
+-- ============================================================
 local dragging, dragStart, startPos = false, nil, nil
+
 header.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.Touch
         or input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -373,6 +442,7 @@ header.InputBegan:Connect(function(input)
         mainFrame.ZIndex = 100
     end
 end)
+
 UserInputService.InputChanged:Connect(function(input)
     if not dragging or not dragStart then return end
     if input.UserInputType == Enum.UserInputType.Touch
@@ -383,6 +453,7 @@ UserInputService.InputChanged:Connect(function(input)
             startPos.Y.Scale, startPos.Y.Offset + d.Y)
     end
 end)
+
 UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.Touch
         or input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -394,6 +465,7 @@ end)
 
 local isMinimized = false
 local TWEEN_INFO = TweenInfo.new(CONFIG.TWEEN_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
 local function toggleMinimize()
     isMinimized = not isMinimized
     if isMinimized then
@@ -429,9 +501,22 @@ end
 minimizeBtn.Activated:Connect(toggleMinimize)
 closeBtn.Activated:Connect(function() screenGui.Enabled = false end)
 
+-- ============================================================
+-- [第 1/5 条结束]
+-- 下一段：UI 工具函数 + 通用辅助 + 防封 A6
+-- ============================================================
+-- ============================================================
+-- [续接第 1/5 条 · 第 2/5 条]
+-- ============================================================
+
+-- ============================================================
+-- [ 12 ] UI 工具函数
+-- ============================================================
 local tabs = {}
 local activeTab = nil
+local activeSliderDrag = nil
 
+-- 创建 Tab
 local function createTab(tabName, iconText)
     local tabData = { name = tabName }
     local tabButton = Instance.new("TextButton")
@@ -529,11 +614,13 @@ local function createTab(tabName, iconText)
     return tabData
 end
 
+-- 解析父节点（支持传 tab 对象或 frame）
 local function resolveParent(target)
     if target and target.contentFrame then return target.contentFrame end
     return target
 end
 
+-- 分区标题
 local function addSection(target, sectionTitle)
     local parent = resolveParent(target)
     local section = Instance.new("Frame")
@@ -553,6 +640,7 @@ local function addSection(target, sectionTitle)
     lbl.Parent = section
 end
 
+-- 按钮
 local function addButton(target, btnText, callback)
     local parent = resolveParent(target)
     local btn = Instance.new("TextButton")
@@ -590,6 +678,7 @@ local function addButton(target, btnText, callback)
     return btn, lbl
 end
 
+-- 开关
 local function addToggle(target, btnText, defaultState, onChanged, logName)
     local state = defaultState or false
     local btn, lbl = addButton(target, btnText, function(_, label)
@@ -605,7 +694,7 @@ local function addToggle(target, btnText, defaultState, onChanged, logName)
     return btn, lbl
 end
 
-local activeSliderDrag = nil
+-- 滑条
 local function addSlider(target, labelText, minVal, maxVal, defaultVal, onChange)
     local parent = resolveParent(target)
     local container = Instance.new("Frame")
@@ -690,6 +779,7 @@ UserInputService.InputChanged:Connect(function(input)
         activeSliderDrag(input.Position.X)
     end
 end)
+
 UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.Touch
         or input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -697,6 +787,7 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
+-- 清空所有 tab
 local function clearAllTabs()
     for _, c in ipairs(sidebar:GetChildren()) do
         if c:IsA("TextButton") then c:Destroy() end
@@ -708,6 +799,9 @@ local function clearAllTabs()
     activeTab = nil
 end
 
+-- ============================================================
+-- [ 13 ] 通用辅助函数
+-- ============================================================
 local function getHRP()
     local char = player.Character
     if not char then return nil end
@@ -736,39 +830,38 @@ local function firePrompt(prompt)
     pcall(function() fireproximityprompt(prompt) end)
 end
 
-local function teleportTo(pos)
-    local hrp = getHRP()
-    if not hrp then return false end
-    hrp.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
-    return true
-end
-
 -- ============================================================
--- 🛡 防封 A6 模块
+-- [ 14 ] 防封 A6 模块
+-- 接口：_G.XiaoHeiYuAntiBan
 -- ============================================================
 local AntiBan
 do
     local AB = {}
+
     AB.CONFIG = {
-        SMOOTH_STEP_MAX_DIST = 25,
-        SMOOTH_DELAY_MIN = 0.02,
-        SMOOTH_DELAY_MAX = 0.05,
-        FAKE_MOVE_INTERVAL = 3.5,
-        FAKE_MOVE_DURATION = 0.4,
-        SPEED_LIMIT = 60,
-        TELEPORT_COOLDOWN = 1.2,
-        SPEED_WATCH_INTERVAL = 1.0,
-        SPEED_MAX_ALLOWED = 200,
-        HEARTBEAT_JITTER_MIN = 0.05,
-        HEARTBEAT_JITTER_MAX = 0.25,
-        SANITIZE_RAY_DEPTH = 40,
-    }
-    AB.stats = {
-        teleportCount = 0, teleportBlocked = 0, lastTeleportTime = 0,
-        speedWarnCount = 0, kickWarnCount = 0,
+        SMOOTH_STEP_MAX_DIST   = 25,
+        SMOOTH_DELAY_MIN       = 0.02,
+        SMOOTH_DELAY_MAX       = 0.05,
+        FAKE_MOVE_INTERVAL     = 3.5,
+        FAKE_MOVE_DURATION     = 0.4,
+        SPEED_LIMIT            = 60,
+        TELEPORT_COOLDOWN      = 1.2,
+        SPEED_WATCH_INTERVAL   = 1.0,
+        SPEED_MAX_ALLOWED      = 200,
+        HEARTBEAT_JITTER_MIN   = 0.05,
+        HEARTBEAT_JITTER_MAX   = 0.25,
+        SANITIZE_RAY_DEPTH     = 40,
     }
 
-    local _getHRP = function()
+    AB.stats = {
+        teleportCount = 0,
+        teleportBlocked = 0,
+        lastTeleportTime = 0,
+        speedWarnCount = 0,
+        kickWarnCount = 0,
+    }
+
+    local function _getHRP()
         local char = player.Character
         if not char then return nil end
         return char:FindFirstChild("HumanoidRootPart")
@@ -782,6 +875,7 @@ do
         end)
     end
 
+    -- 落点合法性校验
     local function sanitizePos(targetPos)
         if not targetPos then return nil end
         local hrp = _getHRP()
@@ -803,6 +897,7 @@ do
         return targetPos
     end
 
+    -- 传送冷却检查
     local function canTeleport()
         local now = tick()
         if now - AB.stats.lastTeleportTime < AB.CONFIG.TELEPORT_COOLDOWN then
@@ -812,6 +907,7 @@ do
         return true
     end
 
+    -- 传送队列（串行化）
     local teleportQueue = {}
     local queueRunning = false
     local function enqueueTeleport(fn)
@@ -828,6 +924,7 @@ do
         end)
     end
 
+    -- 隐蔽平滑传送
     function AB.smoothTeleport(targetPos, steps)
         if not canTeleport() then return false end
         local clean = sanitizePos(targetPos)
@@ -839,6 +936,7 @@ do
         targetPos = clean
         local hrp = _getHRP()
         if not hrp then return false end
+
         local start = hrp.Position
         local totalDist = (start - targetPos).Magnitude
         if totalDist < 5 then
@@ -848,12 +946,15 @@ do
             AB.stats.lastTeleportTime = tick()
             return true
         end
+
         local segCount = math.clamp(math.ceil(totalDist / AB.CONFIG.SMOOTH_STEP_MAX_DIST), 1, 30)
         local curPos = start
         for s = 1, segCount do
             local t = s / segCount
             local eased = t * t * (3 - 2 * t)
-            local jitter = Vector3.new((math.random() - 0.5) * 2.5, 0, (math.random() - 0.5) * 2.5)
+            local jitter = Vector3.new(
+                (math.random() - 0.5) * 2.5, 0,
+                (math.random() - 0.5) * 2.5)
             local segTarget = start:Lerp(targetPos, eased) + jitter
             local segDist = (curPos - segTarget).Magnitude
             local subSteps = math.clamp(math.floor(segDist / 6), 2, 6)
@@ -867,6 +968,7 @@ do
             end
             curPos = segTarget
         end
+
         hrp.CFrame = CFrame.new(targetPos)
         if AB.CONFIG.SPEED_LIMIT > 0 then _zeroVelocity(hrp) end
         AB.stats.teleportCount = AB.stats.teleportCount + 1
@@ -874,6 +976,7 @@ do
         return true
     end
 
+    -- 硬传送
     function AB.hardTeleport(targetPos)
         if not canTeleport() then return false end
         local clean = sanitizePos(targetPos)
@@ -891,12 +994,18 @@ do
         return true
     end
 
+    -- 入队版传送
     function AB.queueTeleport(targetPos, mode)
         enqueueTeleport(function()
-            if mode == "hard" then AB.hardTeleport(targetPos) else AB.smoothTeleport(targetPos) end
+            if mode == "hard" then
+                AB.hardTeleport(targetPos)
+            else
+                AB.smoothTeleport(targetPos)
+            end
         end)
     end
 
+    -- 假移动
     local fakeMoveRunning = false
     local fakeMoveThread = nil
     function AB.setFakeMovement(on)
@@ -912,7 +1021,9 @@ do
                     if humanoid and not humanoid.SeatPart then
                         local fwd = (math.random() - 0.5) * 2
                         local side = (math.random() - 0.5) * 2
-                        pcall(function() humanoid:Move(Vector3.new(side, 0, fwd), true) end)
+                        pcall(function()
+                            humanoid:Move(Vector3.new(side, 0, fwd), true)
+                        end)
                         task.wait(AB.CONFIG.FAKE_MOVE_DURATION)
                         pcall(function() humanoid:Move(Vector3.zero, false) end)
                     end
@@ -921,11 +1032,14 @@ do
         end)
     end
 
+    -- 反踢监控
     local kickWatchOn = false
     function AB.setKickWatch(on)
         kickWatchOn = on
         if not on then return end
-        if AB._kickConn then pcall(function() AB._kickConn:Disconnect() end) end
+        if AB._kickConn then
+            pcall(function() AB._kickConn:Disconnect() end)
+        end
         AB._kickConn = player.CharacterRemoving:Connect(function()
             if kickWatchOn then
                 AB.stats.kickWarnCount = AB.stats.kickWarnCount + 1
@@ -934,6 +1048,7 @@ do
         end)
     end
 
+    -- 反检测扫描
     local scanRunning = false
     local scanThread = nil
     local DETECT_KEYWORDS = {
@@ -971,6 +1086,7 @@ do
         end)
     end
 
+    -- 速度异常监控
     local speedWatchRunning = false
     local speedWatchThread = nil
     function AB.setSpeedWatch(on)
@@ -995,6 +1111,7 @@ do
         end)
     end
 
+    -- 心跳抖动
     function AB.startHeartbeatJitter()
         task.spawn(function()
             while true do
@@ -1004,6 +1121,7 @@ do
         end)
     end
 
+    -- 配置读取
     AB.getConfig = function()
         return {
             SMOOTH_STEP_MAX_DIST = AB.CONFIG.SMOOTH_STEP_MAX_DIST,
@@ -1018,6 +1136,7 @@ do
         }
     end
 
+    -- 统计读取
     AB.getStats = function()
         return {
             teleportCount = AB.stats.teleportCount,
@@ -1033,22 +1152,24 @@ do
 end
 
 -- ============================================================
--- [第 1/5 条结束] 下一段：传送 + 事件 + 生存 + 刷钱 + 破解 + 弹药 + 碰撞箱 + 旋转 + 防抓拍 + 交通 + 车辆
+-- [第 2/5 条结束]
+-- 下一段：传送模块 + 事件监听 + 生存 + 刷钱 + 破解 + 弹药 + 碰撞箱 + 旋转 + 防抓拍 + 交通 + 车辆
 -- ============================================================
 -- ============================================================
--- [续接第 1/5 条]
+-- [续接第 2/5 条 · 第 3/5 条]
 -- ============================================================
 
 -- ============================================================
--- 🌀 传送模块
+-- [ 15 ] 传送模块
+-- 接口：_G.XiaoHeiYuTeleport
 -- ============================================================
 local Teleport
 do
     local TP = {}
-    TP.LOW_PROFILE = true
-    TP.AGGRESSIVE_MODE = false
-    TP.ZERO_VELOCITY_AFTER = true
-    TP.TARGET_CACHE_TIME = 0.8
+    TP.LOW_PROFILE          = true
+    TP.AGGRESSIVE_MODE      = false
+    TP.ZERO_VELOCITY_AFTER  = true
+    TP.TARGET_CACHE_TIME    = 0.8
     TP.LOW_PROFILE_STOP_DIST = 15
 
     local function _zeroVel(hrp)
@@ -1110,6 +1231,7 @@ do
         smoothTeleport = _G.XiaoHeiYuAntiBan.smoothTeleport
     end
 
+    -- 目标缓存
     local targetCache = { pos = nil, time = 0 }
 
     local function getTargetFromClientContent()
@@ -1225,23 +1347,24 @@ do
         return smoothTeleport(seatPos + offset)
     end
 
-    TP.teleportForJob = teleportForJob
-    TP.smoothTeleport = smoothTeleport
-    TP.hardTeleport = hardTeleport
-    TP.teleportToPosition = teleportToPosition
-    TP.getTargetPosition = getTargetPosition
+    TP.teleportForJob             = teleportForJob
+    TP.smoothTeleport             = smoothTeleport
+    TP.hardTeleport               = hardTeleport
+    TP.teleportToPosition         = teleportToPosition
+    TP.getTargetPosition          = getTargetPosition
     TP.getTargetFromClientContent = getTargetFromClientContent
-    TP.getTargetFromMarkers = getTargetFromMarkers
-    TP.clearTargetCache = clearTargetCache
-    TP.teleportToPlayer = teleportToPlayer
-    TP.teleportToMouse = teleportToMouse
-    TP.teleportOutOfVehicle = teleportOutOfVehicle
-    TP.getHRP = getHRP
-    TP.getCurrentVehicle = getCurrentVehicle
-    TP.forEachVehiclePart = forEachVehiclePart
-    TP.dismountVehicle = dismountVehicle
-    TP.zeroVelocity = _zeroVel
-    TP.Log = Log
+    TP.getTargetFromMarkers       = getTargetFromMarkers
+    TP.clearTargetCache           = clearTargetCache
+    TP.teleportToPlayer           = teleportToPlayer
+    TP.teleportToMouse            = teleportToMouse
+    TP.teleportOutOfVehicle       = teleportOutOfVehicle
+    TP.getHRP                     = getHRP
+    TP.getCurrentVehicle          = getCurrentVehicle
+    TP.forEachVehiclePart         = forEachVehiclePart
+    TP.dismountVehicle            = dismountVehicle
+    TP.zeroVelocity               = _zeroVel
+    TP.Log                        = Log
+
     TP.getConfig = function()
         return {
             LOW_PROFILE = TP.LOW_PROFILE,
@@ -1258,10 +1381,11 @@ do
 end
 
 -- ============================================================
--- 事件监听
+-- [ 16 ] 事件监听
 -- ============================================================
 local lastHealth = nil
 local healthWatchConn = nil
+
 local function watchHumanoidForEvents(humanoid)
     if healthWatchConn then healthWatchConn:Disconnect() end
     lastHealth = humanoid.Health
@@ -1278,6 +1402,7 @@ local function watchHumanoidForEvents(humanoid)
         lastHealth = newHealth
     end)
 end
+
 local function onCharacterAdded(char)
     local humanoid = char:WaitForChild("Humanoid", 5)
     if humanoid then
@@ -1285,6 +1410,7 @@ local function onCharacterAdded(char)
         Log.add("✓ 角色已加载: " .. player.Name, "blue")
     end
 end
+
 if player.Character then task.spawn(onCharacterAdded, player.Character) end
 player.CharacterAdded:Connect(onCharacterAdded)
 
@@ -1295,16 +1421,17 @@ Players.PlayerRemoving:Connect(function(plr)
         Log.add("· 玩家离开: " .. plr.Name, "gray")
     end
 end)
+
 Players.PlayerAdded:Connect(function(plr)
     Log.add("· 玩家加入: " .. plr.Name, "gray")
 end)
 
 -- ============================================================
--- 生存
+-- [ 17 ] 生存模块
 -- ============================================================
-local HEALTH_KEYWORDS = {"health", "hp", "life", "lives", "vitality", "生命", "血量", "血条"}
+local HEALTH_KEYWORDS  = {"health", "hp", "life", "lives", "vitality", "生命", "血量", "血条"}
 local STAMINA_KEYWORDS = {"stamina", "energy", "sprint", "endurance", "体力", "精力", "耐力"}
-local FOOD_KEYWORDS = {"food", "hunger", "thirst", "hungry", "thirsty", "eat", "drink", "satiety", "食物", "饥饿", "口渴", "饱食"}
+local FOOD_KEYWORDS    = {"food", "hunger", "thirst", "hungry", "thirsty", "eat", "drink", "satiety", "食物", "饥饿", "口渴", "饱食"}
 
 local function forEachPlayerValue(fn)
     local containers = {player, player.Character, player:FindFirstChild("PlayerGui"), player:FindFirstChild("Backpack"), player:FindFirstChild("PlayerScripts")}
@@ -1351,15 +1478,27 @@ local function startValueLock(flag, keywords, fixedValue, name)
     end)
 end
 
-local healthFlag = {on=false,thread=nil}
-local staminaFlag = {on=false,thread=nil}
-local foodFlag = {on=false,thread=nil}
-local function setInfiniteHealth(on) healthFlag.on = on; startValueLock(healthFlag, HEALTH_KEYWORDS, 99999, "health") end
-local function setInfiniteStamina(on) staminaFlag.on = on; startValueLock(staminaFlag, STAMINA_KEYWORDS, 99999, "stamina") end
-local function setInfiniteFood(on) foodFlag.on = on; startValueLock(foodFlag, FOOD_KEYWORDS, 100, "food") end
+local healthFlag  = {on = false, thread = nil}
+local staminaFlag = {on = false, thread = nil}
+local foodFlag    = {on = false, thread = nil}
+
+local function setInfiniteHealth(on)
+    healthFlag.on = on
+    startValueLock(healthFlag, HEALTH_KEYWORDS, 99999, "health")
+end
+
+local function setInfiniteStamina(on)
+    staminaFlag.on = on
+    startValueLock(staminaFlag, STAMINA_KEYWORDS, 99999, "stamina")
+end
+
+local function setInfiniteFood(on)
+    foodFlag.on = on
+    startValueLock(foodFlag, FOOD_KEYWORDS, 100, "food")
+end
 
 -- ============================================================
--- 💰 刷钱模块
+-- [ 18 ] 刷钱模块（出租车 / 公交车 / 快递）
 -- ============================================================
 local function clickAt(x, y)
     pcall(function()
@@ -1377,8 +1516,8 @@ local function clickPhoneUI()
 end
 
 local ACCEPT_KEYWORDS = {
-    taxi = {"start shift", "accept", "take order", "接单", "接任务", "开始轮班", "taxi shift", "出租车"},
-    bus  = {"start route", "drive route", "bus route", "开始路线", "驾驶路线", "start bus", "公交"},
+    taxi     = {"start shift", "accept", "take order", "接单", "接任务", "开始轮班", "taxi shift", "出租车"},
+    bus      = {"start route", "drive route", "bus route", "开始路线", "驾驶路线", "start bus", "公交"},
     delivery = {"delivery", "package", "送快递", "派送", "快递", "start delivery"},
 }
 
@@ -1390,7 +1529,8 @@ local function tryClickAcceptButton(jobType)
     for _, gui in ipairs(pg:GetDescendants()) do
         if (gui:IsA("TextButton") or gui:IsA("ImageButton")) and gui.Visible and not gui:IsDescendantOf(screenGui) then
             local txt = ""
-            if gui:IsA("TextButton") then txt = gui.Text
+            if gui:IsA("TextButton") then
+                txt = gui.Text
             else
                 local tl = gui:FindFirstChildWhichIsA("TextLabel", true)
                 if tl then txt = tl.Text end
@@ -1477,13 +1617,13 @@ local function teleportForJob(targetPos)
 end
 
 local jobRunning = {
-    taxi = { value = false },
-    bus  = { value = false },
-    delivery = { value = false },
+    taxi     = {value = false},
+    bus      = {value = false},
+    delivery = {value = false},
 }
-local jobThreads = { taxi = nil, bus = nil, delivery = nil }
-local jobCounts = { taxi = 0, bus = 0, delivery = 0 }
-local jobNames = { taxi = "出租车", bus = "公交车", delivery = "快递" }
+local jobThreads = {taxi = nil, bus = nil, delivery = nil}
+local jobCounts  = {taxi = 0, bus = 0, delivery = 0}
+local jobNames   = {taxi = "出租车", bus = "公交车", delivery = "快递"}
 
 local function runJobLoop(jobType)
     local running = jobRunning[jobType]
@@ -1535,25 +1675,28 @@ local function setJobRunning(jobType, on)
     end)
 end
 
-local function setTaxiAutoFarm(on) setJobRunning("taxi", on) end
-local function setBusAutoFarm(on) setJobRunning("bus", on) end
+local function setTaxiAutoFarm(on)     setJobRunning("taxi", on) end
+local function setBusAutoFarm(on)      setJobRunning("bus", on) end
 local function setDeliveryAutoFarm(on) setJobRunning("delivery", on) end
 
 -- ============================================================
--- ATM 破解
+-- [ 19 ] ATM 破解
 -- ============================================================
 local atmCrackRunning = false
 local atmCrackThread = nil
+
 local function getGuiText(gui)
     if gui:IsA("TextButton") or gui:IsA("TextLabel") then return gui.Text end
     local tl = gui:FindFirstChildWhichIsA("TextLabel", true)
     if tl then return tl.Text end
     return ""
 end
+
 local function isCodeLike(txt)
     if not txt or #txt < 2 or #txt > 4 then return false end
     return txt:match("^%u%u%u?%u?$") ~= nil
 end
+
 local function findCodeButtons()
     local buttons = {}
     local pg = player:FindFirstChild("PlayerGui")
@@ -1561,11 +1704,12 @@ local function findCodeButtons()
     for _, gui in ipairs(pg:GetDescendants()) do
         if (gui:IsA("TextButton") or gui:IsA("ImageButton")) and gui.Visible and not gui:IsDescendantOf(screenGui) then
             local txt = getGuiText(gui)
-            if isCodeLike(txt) then table.insert(buttons, {btn=gui, code=txt}) end
+            if isCodeLike(txt) then table.insert(buttons, {btn = gui, code = txt}) end
         end
     end
     return buttons
 end
+
 local function findTargetCodes()
     local pg = player:FindFirstChild("PlayerGui")
     if not pg then return nil end
@@ -1583,6 +1727,7 @@ local function findTargetCodes()
     end
     return nil
 end
+
 local function autoCrackOnce()
     local buttons = findCodeButtons()
     if #buttons == 0 then return false end
@@ -1607,6 +1752,7 @@ local function autoCrackOnce()
     end
     return clicked > 0
 end
+
 local function setAutoCrackATM(on)
     atmCrackRunning = on
     if atmCrackThread then task.cancel(atmCrackThread); atmCrackThread = nil end
@@ -1620,9 +1766,10 @@ local function setAutoCrackATM(on)
 end
 
 -- ============================================================
--- 无限弹药
+-- [ 20 ] 无限弹药
 -- ============================================================
 local saintConnections = {}
+
 local function setInfiniteAmmo(on)
     for _, conn in ipairs(saintConnections) do pcall(function() conn:Disconnect() end) end
     saintConnections = {}
@@ -1630,6 +1777,7 @@ local function setInfiniteAmmo(on)
     local TARGET = 999
     local backpack = player:FindFirstChild("Backpack")
     if not backpack then return end
+
     local function processTool(tool)
         if not tool:IsA("Tool") then return end
         local wl = tool:FindFirstChild("_TeamWhitelisted")
@@ -1639,10 +1787,13 @@ local function setInfiniteAmmo(on)
         local ammo = cfg:FindFirstChild("Ammo")
         if ammo and ammo:IsA("ValueBase") then ammo.Value = TARGET end
     end
+
     for _, item in ipairs(backpack:GetChildren()) do processTool(item) end
+
     table.insert(saintConnections, backpack.ChildAdded:Connect(function(child)
         task.wait(0.1); processTool(child)
     end))
+
     table.insert(saintConnections, RunService.Heartbeat:Connect(function()
         for _, tool in ipairs(backpack:GetChildren()) do
             local cfg = tool:FindFirstChild("Config")
@@ -1655,18 +1806,20 @@ local function setInfiniteAmmo(on)
 end
 
 -- ============================================================
--- 大碰撞箱
+-- [ 21 ] 大碰撞箱
 -- ============================================================
 local bigHitboxEnabled = false
 local bigHitboxData = {}
+
 local function enlargeHead(character)
     local head = character:FindFirstChild("Head")
     if not head or bigHitboxData[head] then return end
-    bigHitboxData[head] = {Size=head.Size, Transparency=head.Transparency, CanCollide=head.CanCollide}
+    bigHitboxData[head] = {Size = head.Size, Transparency = head.Transparency, CanCollide = head.CanCollide}
     head.Size = Vector3.new(4, 4, 4)
     head.Transparency = 0.4
     head.CanCollide = false
 end
+
 local function restoreHead(head)
     local d = bigHitboxData[head]
     if d then
@@ -1676,6 +1829,7 @@ local function restoreHead(head)
         bigHitboxData[head] = nil
     end
 end
+
 local function setBigHitbox(on)
     bigHitboxEnabled = on
     if on then
@@ -1684,10 +1838,12 @@ local function setBigHitbox(on)
         for head in pairs(bigHitboxData) do restoreHead(head) end
     end
 end
+
 local function watchCharacterForHitbox(char)
     char:WaitForChild("Head", 5)
     if bigHitboxEnabled then enlargeHead(char) end
 end
+
 if player.Character then task.spawn(watchCharacterForHitbox, player.Character) end
 player.CharacterAdded:Connect(function(char)
     bigHitboxData = {}
@@ -1695,12 +1851,13 @@ player.CharacterAdded:Connect(function(char)
 end)
 
 -- ============================================================
--- 疯狂旋转
+-- [ 22 ] 疯狂旋转
 -- ============================================================
 local spinRunning = false
 local spinSpeed = 720
 local spinConnection = nil
 local originalAutoRotate = nil
+
 local function setSpin(on)
     spinRunning = on
     if on then
@@ -1728,15 +1885,17 @@ local function setSpin(on)
         originalAutoRotate = nil
     end
 end
+
 local function setSpinSpeed(v) spinSpeed = v end
 
 -- ============================================================
--- 防抓拍
+-- [ 23 ] 防抓拍
 -- ============================================================
 local antiCameraRunning = false
 local antiCameraThread = nil
 local ANTI_CAMERA_RADIUS = 60
 local CAMERA_KEYWORDS = {"camera","traffic","photo","capture","snap","violation","ticket","redlight","stopline","checkpoint","抓拍","摄像头","闯红灯","违规","拍照","电子眼"}
+
 local function isTrafficCameraPart(part)
     if not part:IsA("BasePart") then return false end
     local n = part.Name:lower()
@@ -1745,6 +1904,7 @@ local function isTrafficCameraPart(part)
     end
     return false
 end
+
 local function setAntiCamera(on)
     antiCameraRunning = on
     if antiCameraThread then task.cancel(antiCameraThread); antiCameraThread = nil end
@@ -1753,7 +1913,9 @@ local function setAntiCamera(on)
         while antiCameraRunning do
             local hrp = getHRP()
             if hrp then
-                local ok, parts = pcall(function() return workspace:GetPartBoundsInRadius(hrp.Position, ANTI_CAMERA_RADIUS) end)
+                local ok, parts = pcall(function()
+                    return workspace:GetPartBoundsInRadius(hrp.Position, ANTI_CAMERA_RADIUS)
+                end)
                 if ok and parts then
                     for _, part in ipairs(parts) do
                         if isTrafficCameraPart(part) then
@@ -1772,7 +1934,7 @@ local function setAntiCamera(on)
 end
 
 -- ============================================================
--- 交通三合一
+-- [ 24 ] 交通三合一（防罚单 + 防通缉 + 防抓捕）
 -- ============================================================
 local antiFineRunning = false
 local antiFineThread = nil
@@ -1922,6 +2084,7 @@ local WANTED_VALUE_KWS = {
     "arrest","warrant","wantedlevel","wantedlevelvalue","notoriety",
     "通缉","悬赏","星","热度","犯罪","嫌犯","嫌疑","逮捕"
 }
+
 local function lockWantedValues()
     local containers = {
         player, player.Character, player:FindFirstChild("PlayerGui"),
@@ -2046,12 +2209,13 @@ local function setAntiFine(on)
 end
 
 -- ============================================================
--- 车辆
+-- [ 25 ] 车辆模块
 -- ============================================================
 local vehicleSpeedBoost = false
 local vehicleSpeedThread = nil
 local vehicleSpeedMultiplier = 2
 local originalVehicleData = {}
+
 local function setVehicleSpeedBoost(on)
     vehicleSpeedBoost = on
     if vehicleSpeedThread then task.cancel(vehicleSpeedThread); vehicleSpeedThread = nil end
@@ -2069,7 +2233,7 @@ local function setVehicleSpeedBoost(on)
                 forEachVehiclePart(vehicle, function(part)
                     if part:IsA("VehicleSeat") then
                         if not originalVehicleData[part] then
-                            originalVehicleData[part] = {prop="MaxSpeed", value=part.MaxSpeed}
+                            originalVehicleData[part] = {prop = "MaxSpeed", value = part.MaxSpeed}
                         end
                         pcall(function()
                             part.MaxSpeed = 200 * vehicleSpeedMultiplier
@@ -2079,7 +2243,7 @@ local function setVehicleSpeedBoost(on)
                     for _, child in ipairs(part:GetChildren()) do
                         if child:IsA("BodyVelocity") or child:IsA("LinearVelocity") then
                             if not originalVehicleData[child] then
-                                originalVehicleData[child] = {prop="MaxForce", value=child.MaxForce}
+                                originalVehicleData[child] = {prop = "MaxForce", value = child.MaxForce}
                             end
                             pcall(function()
                                 if child:IsA("BodyVelocity") then
@@ -2096,10 +2260,12 @@ local function setVehicleSpeedBoost(on)
         end
     end)
 end
+
 local function setVehicleSpeedMultiplier(v) vehicleSpeedMultiplier = v end
 
 local vehicleBrakeThread = nil
 local vehicleBrakeOn = false
+
 local function setVehicleFastBrake(on)
     vehicleBrakeOn = on
     if vehicleBrakeThread then task.cancel(vehicleBrakeThread); vehicleBrakeThread = nil end
@@ -2125,6 +2291,7 @@ end
 local vehicleFuelThread = nil
 local vehicleFuelOn = false
 local FUEL_KEYWORDS = {"fuel","gas","petrol","gasoline","燃油","汽油"}
+
 local function setVehicleInfiniteFuel(on)
     vehicleFuelOn = on
     if vehicleFuelThread then task.cancel(vehicleFuelThread); vehicleFuelThread = nil end
@@ -2161,6 +2328,7 @@ end
 local vehicleDurabilityThread = nil
 local vehicleDurabilityOn = false
 local DURABILITY_KEYWORDS = {"durability","health","hp","integrity","condition","damage","耐久","血量","损伤"}
+
 local function setVehicleInfiniteDurability(on)
     vehicleDurabilityOn = on
     if vehicleDurabilityThread then task.cancel(vehicleDurabilityThread); vehicleDurabilityThread = nil end
@@ -2186,6 +2354,7 @@ end
 local vehicleNoCollideOn = false
 local vehicleNoCollideThread = nil
 local noCollideSaved = {}
+
 local function setVehicleNoCollide(on)
     vehicleNoCollideOn = on
     if vehicleNoCollideThread then task.cancel(vehicleNoCollideThread); vehicleNoCollideThread = nil end
@@ -2213,6 +2382,7 @@ end
 local vehicleStableOn = false
 local vehicleStableThread = nil
 local stableSaved = {}
+
 local function setVehicleStable(on)
     vehicleStableOn = on
     if vehicleStableThread then task.cancel(vehicleStableThread); vehicleStableThread = nil end
@@ -2244,6 +2414,7 @@ end
 
 local vehicleInstantStopOn = false
 local vehicleInstantStopThread = nil
+
 local function setVehicleInstantStop(on)
     vehicleInstantStopOn = on
     if vehicleInstantStopThread then task.cancel(vehicleInstantStopThread); vehicleInstantStopThread = nil end
@@ -2267,14 +2438,15 @@ local function setVehicleInstantStop(on)
 end
 
 -- ============================================================
--- [第 2/5 条结束] 下一段：停止所有 + 初始化 + 默认界面 + 圣奥里界面 + 卡密逻辑
+-- [第 3/5 条结束]
+-- 下一段：停止所有 + 初始化 + 默认界面 + 圣奥里界面 + 卡密逻辑
 -- ============================================================
 -- ============================================================
--- [续接第 2/5 条]
+-- [续接第 3/5 条 · 第 4/5 条]
 -- ============================================================
 
 -- ============================================================
--- 停止所有
+-- [ 26 ] 停止所有功能
 -- ============================================================
 local function stopAllSaintFeatures()
     setInfiniteAmmo(false)
@@ -2301,7 +2473,7 @@ local function stopAllSaintFeatures()
 end
 
 -- ============================================================
--- 初始化
+-- [ 27 ] 初始化检查（6 道）
 -- ============================================================
 local initSteps = {
     {name = "UI 加载",      desc = "检查小黑鱼界面是否完整"},
@@ -2365,7 +2537,7 @@ local function runInitAll(onProgress, onDone)
 end
 
 -- ============================================================
--- 默认界面
+-- [ 28 ] 默认界面（非圣奥里时显示）
 -- ============================================================
 local DEFAULT_NOTICE = "欢迎使用 " .. BRAND_NAME .. "\n\n请到【服务器】页选择服务器脚本。"
 
@@ -2375,11 +2547,12 @@ buildDefaultUI = function()
     noticeContent.Text = DEFAULT_NOTICE
     Log.setLabel(nil)
 
-    local tabNotice  = createTab("公告",   "📢")
-    local tabServer  = createTab("服务器", "🌐")
-    local tabTeleport= createTab("传送",   "🌀")
-    local tabGeneral = createTab("通用",   "⚙")
+    local tabNotice   = createTab("公告",   "📢")
+    local tabServer   = createTab("服务器", "🌐")
+    local tabTeleport = createTab("传送",   "🌀")
+    local tabGeneral  = createTab("通用",   "⚙")
 
+    -- 公告
     do
         local card = Instance.new("Frame")
         card.Size = UDim2.new(1, 0, 0, 160)
@@ -2403,6 +2576,7 @@ buildDefaultUI = function()
         ct.Parent = card
     end
 
+    -- 服务器
     do
         addSection(tabServer, "热门服务器")
         local btn, btnLabel = addButton(tabServer, "", nil)
@@ -2464,6 +2638,7 @@ buildDefaultUI = function()
         end)
     end
 
+    -- 传送 tab
     do
         addSection(tabTeleport, "模式")
         addToggle(tabTeleport, "低暴露模式", true, function(on)
@@ -2627,6 +2802,7 @@ buildDefaultUI = function()
         end, "速度监控")
     end
 
+    -- 通用
     do
         addSection(tabGeneral, "通用工具")
         addButton(tabGeneral, "重置角色", function()
@@ -2639,14 +2815,14 @@ buildDefaultUI = function()
 end
 
 -- ============================================================
--- 圣奥里界面
+-- [ 29 ] 圣奥里界面（15 个 tab）
 -- ============================================================
 local SAINT_NOTICE = "欢迎使用 " .. BRAND_NAME .. " · 圣奥里\n\n"
     .. "• 初始化：6 道检查\n"
     .. "• 日志：实时记录事件\n"
     .. "• 刷钱：出租车 / 公交车 / 快递 / 外卖 / 拖车 / 警车 / 垃圾车 / 消防车 / 公交检查\n"
     .. "• 传送：魔改版（防封模块自动接管 smoothTeleport）\n"
-    .. "• 交通：防罚单三合一（防罚单 + 防通缉 + 防抓捕）\n"
+    .. "• 交通：防罚单三合一（防罚单 + 防通缉 + 防抓捕）+ 隐蔽版\n"
     .. "• 防封：A6 + A7 增强检测\n"
     .. "• DLC：ESP / 车辆飞行 / 子弹 / 更多刷钱职业\n"
 
@@ -2671,7 +2847,7 @@ buildSaintUI = function()
     local tabNotice   = createTab("公告",   "📢")
     local tabGeneral  = createTab("通用",   "⚙")
 
-    -- 初始化
+    -- ============ 初始化 ============
     addSection(tabInit, "一键初始化")
     local initBtn, initLbl = addButton(tabInit, "▶ 开始初始化（6 道检查）", nil)
 
@@ -2772,7 +2948,7 @@ buildSaintUI = function()
         )
     end)
 
-    -- 日志
+    -- ============ 日志 ============
     addSection(tabLog, "实时日志")
     local logScroll = Instance.new("ScrollingFrame")
     logScroll.Size = UDim2.new(1, 0, 0, 280)
@@ -2813,23 +2989,23 @@ buildSaintUI = function()
         Log.add("日志已清空", "gray")
     end)
 
-    -- 战斗
+    -- ============ 战斗 ============
     addSection(tabBattle, "战斗辅助")
     addToggle(tabBattle, "无限弹药", false, setInfiniteAmmo, "无限弹药")
     addToggle(tabBattle, "大碰撞箱", false, setBigHitbox, "大碰撞箱")
 
-    -- 生存
+    -- ============ 生存 ============
     addSection(tabSurvival, "生命")
     addToggle(tabSurvival, "无限生命", false, setInfiniteHealth, "无限生命")
     addSection(tabSurvival, "体力与食物")
     addToggle(tabSurvival, "无限体力", false, setInfiniteStamina, "无限体力")
     addToggle(tabSurvival, "无限食物", false, setInfiniteFood, "无限食物")
 
-    -- 破解
+    -- ============ 破解 ============
     addSection(tabHack, "ATM 黑客")
     addToggle(tabHack, "自动破解", false, setAutoCrackATM, "ATM自动破解")
 
-    -- 刷钱
+    -- ============ 刷钱 ============
     addSection(tabMoney, "自动接单 · 刷钱")
     addToggle(tabMoney, "出租车自动接单", false, setTaxiAutoFarm, "出租车刷钱")
     addToggle(tabMoney, "公交车自动接单", false, setBusAutoFarm, "公交车刷钱")
@@ -2862,7 +3038,25 @@ buildSaintUI = function()
         end
     end)
 
-    -- 交通
+    local moneyTip = Instance.new("TextLabel")
+    moneyTip.Size = UDim2.new(1, 0, 0, 100)
+    moneyTip.BackgroundTransparency = 1
+    moneyTip.Text = "自动接单流程：\n"
+        .. "1. 尝试点游戏里的接单按钮（关键字匹配）\n"
+        .. "2. 找不到按钮 → 模拟点击手机图标位置\n"
+        .. "3. 从 Gameplay.Entities.ClientContent 找目标\n"
+        .. "4. 下车 + 传送 → 等 2.5 秒 → 第 2 次传送\n"
+        .. "手机坐标可以在代码顶部 PHONE_POS_X / PHONE_POS_Y 改"
+    moneyTip.TextColor3 = Color3.fromRGB(150, 150, 170)
+    moneyTip.TextSize = 11
+    moneyTip.Font = Enum.Font.Gotham
+    moneyTip.TextWrapped = true
+    moneyTip.TextXAlignment = Enum.TextXAlignment.Left
+    moneyTip.TextYAlignment = Enum.TextYAlignment.Top
+    moneyTip.ZIndex = 5
+    moneyTip.Parent = tabMoney.contentFrame
+
+    -- ============ 交通 ============
     addSection(tabTraffic, "交通辅助（激进版 · 慎用）")
     addToggle(tabTraffic, "防抓拍", false, setAntiCamera, "防抓拍")
     addToggle(tabTraffic, "防罚单 + 防通缉 + 防抓捕", false, setAntiFine, "三合一防护")
@@ -2887,8 +3081,28 @@ buildSaintUI = function()
             _G.XiaoHeiYuStealth.disableAll()
         end
     end)
+    addButton(tabTraffic, "🔇 切换安静模式", function()
+        if _G.XiaoHeiYuStealth then
+            _G.XiaoHeiYuStealth.setSilent(not _G.XiaoHeiYuStealth.CONFIG.silent)
+            Log.add("🔇 安静模式: " .. (_G.XiaoHeiYuStealth.CONFIG.silent and "开" or "关"), "gray")
+        end
+    end)
 
-    -- 车辆
+    local trafficTip = Instance.new("TextLabel")
+    trafficTip.Size = UDim2.new(1, 0, 0, 80)
+    trafficTip.BackgroundTransparency = 1
+    trafficTip.Text = "⚠ 上方「激进版」一开容易被检测，建议用下面「隐蔽版」\n"
+        .. "隐蔽版特性：0.6~1.8 秒随机间隔、半径 40 米、每批 4 个、不动 CanCollide"
+    trafficTip.TextColor3 = Color3.fromRGB(255, 200, 120)
+    trafficTip.TextSize = 11
+    trafficTip.Font = Enum.Font.Gotham
+    trafficTip.TextWrapped = true
+    trafficTip.TextXAlignment = Enum.TextXAlignment.Left
+    trafficTip.TextYAlignment = Enum.TextYAlignment.Top
+    trafficTip.ZIndex = 5
+    trafficTip.Parent = tabTraffic.contentFrame
+
+    -- ============ 车辆 ============
     addSection(tabVehicle, "车辆常规")
     addToggle(tabVehicle, "刹车更快", false, setVehicleFastBrake, "刹车更快")
     addToggle(tabVehicle, "车辆速度提升", false, setVehicleSpeedBoost, "车辆速度")
@@ -2901,12 +3115,12 @@ buildSaintUI = function()
     addToggle(tabVehicle, "稳定不翻车", false, setVehicleStable, "稳定不翻车")
     addToggle(tabVehicle, "瞬间停止（每帧清速度）", false, setVehicleInstantStop, "瞬间停止")
 
-    -- 娱乐
+    -- ============ 娱乐 ============
     addSection(tabFun, "人物特效")
     addToggle(tabFun, "疯狂旋转", false, setSpin, "疯狂旋转")
     addSlider(tabFun, "旋转速度 (度/秒)", 30, 3600, spinSpeed, setSpinSpeed)
 
-    -- 传送
+    -- ============ 传送 ============
     addSection(tabTeleport, "模式")
     addToggle(tabTeleport, "低暴露模式", true, function(on)
         if _G.XiaoHeiYuTeleport then _G.XiaoHeiYuTeleport.LOW_PROFILE = on end
@@ -2916,6 +3130,7 @@ buildSaintUI = function()
             _G.XiaoHeiYuTeleport.AGGRESSIVE_MODE = on
             _G.XiaoHeiYuTeleport.LOW_PROFILE = not on
         end
+        Log.add(on and "⚠ 激进模式已开启" or "🛡 低暴露模式", on and "red" or "green")
     end, "激进模式")
     addToggle(tabTeleport, "传送后清零速度", true, function(on)
         if _G.XiaoHeiYuTeleport then _G.XiaoHeiYuTeleport.ZERO_VELOCITY_AFTER = on end
@@ -2933,7 +3148,7 @@ buildSaintUI = function()
             Log.add("✗ 未找到目标", "red")
         end
     end)
-    addButton(tabTeleport, "传送到目标（硬传）", function()
+    addButton(tabTeleport, "传送到目标（硬传 / 瞬移）", function()
         local tp = _G.XiaoHeiYuTeleport
         if not tp then return end
         local pos = tp.getTargetPosition()
@@ -3093,7 +3308,7 @@ buildSaintUI = function()
         Log.add("  · 角色移除: " .. s.kickWarnCount .. " 次", "red")
     end)
 
-    -- DLC tab
+    -- ============ DLC ============
     addSection(tabDLC, "🎯 ESP 透视")
     addToggle(tabDLC, "启用 ESP", false, function(on)
         if _G.XiaoHeiYuESP then _G.XiaoHeiYuESP.setEnabled(on) end
@@ -3172,7 +3387,7 @@ buildSaintUI = function()
         Log.add("○ DLC 全部关闭", "yellow")
     end)
 
-    -- 检测 tab
+    -- ============ 检测 ============
     addSection(tabDetect, "🛡 A7 检测开关")
     addToggle(tabDetect, "Kick / 断线检测", true, function(on)
         if _G.XiaoHeiYuGuard then _G.XiaoHeiYuGuard.CONFIG.detectKick = on end
@@ -3230,7 +3445,7 @@ buildSaintUI = function()
         end
     end)
 
-    -- 圣奥里
+    -- ============ 圣奥里 ============
     addSection(tabSaint, "圣奥里专属")
     addButton(tabSaint, "查看公告", function() noticePanel.Visible = true end)
     addButton(tabSaint, "关闭所有功能", function() stopAllSaintFeatures() end)
@@ -3239,7 +3454,7 @@ buildSaintUI = function()
         if buildDefaultUI then buildDefaultUI() end
     end)
 
-    -- 公告
+    -- ============ 公告 ============
     do
         local card = Instance.new("Frame")
         card.Size = UDim2.new(1, 0, 0, 300)
@@ -3263,7 +3478,7 @@ buildSaintUI = function()
         ct.Parent = card
     end
 
-    -- 通用
+    -- ============ 通用 ============
     addSection(tabGeneral, "通用工具")
     addButton(tabGeneral, "重置角色", function()
         if player.Character then player.Character:BreakJoints() end
@@ -3274,7 +3489,15 @@ buildSaintUI = function()
 end
 
 -- ============================================================
--- 卡密逻辑
+-- [第 4/5 条结束]
+-- 下一段：卡密逻辑 + 隐蔽引擎 + ESP + 飞行 + 子弹 + 刷钱职业 + A7 检测 + 完成
+-- ============================================================
+-- ============================================================
+-- [续接第 4/5 条 · 第 5/5 条]
+-- ============================================================
+
+-- ============================================================
+-- [ 30 ] 卡密逻辑（公益版）
 -- ============================================================
 local function unlockUI()
     TweenService:Create(authOverlay, TweenInfo.new(0.4, Enum.EasingStyle.Quad), { BackgroundTransparency = 1 }):Play()
@@ -3311,34 +3534,20 @@ authBtn.MouseLeave:Connect(function()
 end)
 
 -- ============================================================
--- 启动时自动启用防封基础项
--- ============================================================
-if _G.XiaoHeiYuAntiBan then
-    pcall(function() _G.XiaoHeiYuAntiBan.startHeartbeatJitter() end)
-end
-
--- ============================================================
--- [第 3/5 条结束] 下一段：隐蔽引擎 + 左侧面板 + ESP + 飞行 + 子弹 + 更多刷钱职业
--- ============================================================
--- ============================================================
--- [续接第 3/5 条 · 第 4A/5 条]
--- ============================================================
-
--- ============================================================
--- 🛡 防封 A6 · 隐蔽引擎
+-- [ 31 ] 防封 A6 · 隐蔽引擎
 -- 接口：_G.XiaoHeiYuStealth
 -- ============================================================
 do
     local S = {}
     S.CONFIG = {
-        silent = true,
-        randomIntervalMin = 0.6,
-        randomIntervalMax = 1.8,
-        batchSize = 4,
-        actionCooldownMin = 0.05,
-        actionCooldownMax = 0.15,
-        radius = 40,
-        quietLogWindow = 3,
+        silent              = true,
+        randomIntervalMin   = 0.6,
+        randomIntervalMax   = 1.8,
+        batchSize           = 4,
+        actionCooldownMin   = 0.05,
+        actionCooldownMax   = 0.15,
+        radius              = 40,
+        quietLogWindow      = 3,
     }
 
     local lastLogTime = {}
@@ -3394,7 +3603,7 @@ do
     print("[小黑鱼 A6] 隐蔽引擎已加载")
 end
 
--- ============ 隐蔽版防抓拍 / 交通三合一 ============
+-- ============ 隐蔽版防抓拍 / 三合一 ============
 do
     local S = _G.XiaoHeiYuStealth
 
@@ -3462,112 +3671,27 @@ do
     end
 end
 
--- ============ 左侧悬浮控制台 ============
-do
-    local S = _G.XiaoHeiYuStealth
-    local pg = player:WaitForChild("PlayerGui")
-
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "XiaoHeiYu_StealthPanel"
-    gui.ResetOnSpawn = false
-    gui.IgnoreGuiInset = true
-    gui.Parent = pg
-
-    local panel = Instance.new("Frame")
-    panel.Size = UDim2.new(0, 200, 0, 190)
-    panel.Position = UDim2.new(0, 20, 0.5, -95)
-    panel.BackgroundColor3 = Color3.fromRGB(22, 26, 34)
-    panel.BackgroundTransparency = 0.05
-    panel.BorderSizePixel = 0
-    panel.Active = true
-    panel.Draggable = true
-    panel.Parent = gui
-    Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 10)
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(120, 255, 160)
-    stroke.Thickness = 1.5
-    stroke.Transparency = 0.4
-    stroke.Parent = panel
-
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 30)
-    title.BackgroundTransparency = 1
-    title.Text = "🛡 隐蔽引擎 A6"
-    title.TextColor3 = Color3.fromRGB(120, 255, 160)
-    title.TextSize = 13
-    title.Font = Enum.Font.GothamBold
-    title.Parent = panel
-
-    local btnContainer = Instance.new("Frame")
-    btnContainer.Size = UDim2.new(1, -16, 1, -40)
-    btnContainer.Position = UDim2.new(0, 8, 0, 34)
-    btnContainer.BackgroundTransparency = 1
-    btnContainer.Parent = panel
-    Instance.new("UIListLayout", btnContainer).Padding = UDim.new(0, 6)
-
-    local function makeBtn(text, cb, color)
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(1, 0, 0, 32)
-        btn.BackgroundColor3 = color or Color3.fromRGB(40, 44, 58)
-        btn.BackgroundTransparency = 0.15
-        btn.Text = text
-        btn.TextColor3 = Color3.fromRGB(230, 230, 240)
-        btn.TextSize = 12
-        btn.Font = Enum.Font.GothamBold
-        btn.AutoButtonColor = true
-        btn.Parent = btnContainer
-        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-        btn.Activated:Connect(cb)
-        return btn
-    end
-
-    makeBtn("✅ 一键开启隐蔽模式", function()
-        S.enableAll()
-    end, Color3.fromRGB(60, 100, 70))
-
-    makeBtn("❌ 关闭隐蔽模式", function()
-        S.disableAll()
-    end, Color3.fromRGB(100, 60, 60))
-
-    local silentBtn
-    silentBtn = makeBtn("🔇 安静模式: 开", function()
-        S.setSilent(not S.CONFIG.silent)
-        silentBtn.Text = "🔇 安静模式: " .. (S.CONFIG.silent and "开" or "关")
-    end, Color3.fromRGB(50, 60, 80))
-
-    makeBtn("📊 查看状态", function()
-        print("[小黑鱼 A6] 隐蔽引擎状态:")
-        print("  · silent:", S.CONFIG.silent)
-        print("  · 扫描间隔:", S.CONFIG.randomIntervalMin, "~", S.CONFIG.randomIntervalMax)
-        print("  · 半径:", S.CONFIG.radius)
-        print("  · 每批数量:", S.CONFIG.batchSize)
-    end)
-
-    Log.add("🛡 隐蔽引擎 A6 已加载，左侧面板可用", "green")
-end
-
 -- ============================================================
--- 🎯 DLC-1 · ESP 透视模块
+-- [ 32 ] DLC-1 · ESP 透视
 -- 接口：_G.XiaoHeiYuESP
 -- ============================================================
 do
     local E = {}
     E.CONFIG = {
-        enabled = false,
-        showPlayers = true,
-        showVehicles = true,
-        showNPCs = false,
-        showBox = true,
-        showName = true,
-        showDistance = true,
-        showHealth = true,
-        showLine = false,
-        maxDistance = 1000,
-        playerColor = Color3.fromRGB(120, 255, 160),
-        vehicleColor = Color3.fromRGB(120, 180, 255),
-        npcColor = Color3.fromRGB(255, 160, 120),
-        textSize = 13,
+        enabled         = false,
+        showPlayers     = true,
+        showVehicles    = true,
+        showNPCs        = false,
+        showBox         = true,
+        showName        = true,
+        showDistance    = true,
+        showHealth      = true,
+        showLine        = false,
+        maxDistance     = 1000,
+        playerColor     = Color3.fromRGB(120, 255, 160),
+        vehicleColor    = Color3.fromRGB(120, 180, 255),
+        npcColor        = Color3.fromRGB(255, 160, 120),
+        textSize        = 13,
         refreshInterval = 0.1,
     }
 
@@ -3578,11 +3702,10 @@ do
 
     local function makeGui()
         if espFolder and espFolder.Parent then return espFolder end
-        local coreGui = game:GetService("CoreGui")
         espFolder = Instance.new("Folder")
         espFolder.Name = "XiaoHeiYu_ESP"
-        pcall(function() espFolder.Parent = coreGui end)
-        if not espFolder.Parent then espFolder.Parent = player:WaitForChild("PlayerGui") end
+        pcall(function() espFolder.Parent = CoreGui end)
+        if not espFolder.Parent then espFolder.Parent = playerGui end
         return espFolder
     end
 
@@ -3614,7 +3737,6 @@ do
 
                 local nameLbl = Instance.new("TextLabel")
                 nameLbl.Size = UDim2.new(1, 0, 0, 20)
-                nameLbl.Position = UDim2.new(0, 0, 0, 0)
                 nameLbl.BackgroundTransparency = 1
                 nameLbl.Text = ""
                 nameLbl.TextColor3 = color
@@ -3643,7 +3765,6 @@ do
                 Instance.new("UICorner", healthBar).CornerRadius = UDim.new(1, 0)
 
                 local healthFill = Instance.new("Frame")
-                healthFill.Name = "Fill"
                 healthFill.Size = UDim2.new(1, 0, 1, 0)
                 healthFill.BackgroundColor3 = Color3.fromRGB(120, 255, 160)
                 healthFill.BorderSizePixel = 0
@@ -3677,7 +3798,7 @@ do
     local function destroyESP(model)
         local data = espObjects[model]
         if not data then return end
-        for k, v in pairs(data) do
+        for _, v in pairs(data) do
             if v and v.Destroy then pcall(function() v:Destroy() end) end
         end
         espObjects[model] = nil
@@ -3697,16 +3818,15 @@ do
         if E.CONFIG.showPlayers then
             for _, p in ipairs(Players:GetPlayers()) do
                 if p ~= player and p.Character then
-                    table.insert(list, {model = p.Character, type = "player", name = p.Name, color = E.CONFIG.playerColor})
+                    table.insert(list, {model = p.Character, name = p.Name, color = E.CONFIG.playerColor})
                 end
             end
         end
         if E.CONFIG.showVehicles then
             for _, obj in ipairs(workspace:GetChildren()) do
                 if obj:IsA("Model") then
-                    local hasSeat = obj:FindFirstChildWhichIsA("VehicleSeat", true)
-                    if hasSeat then
-                        table.insert(list, {model = obj, type = "vehicle", name = obj.Name, color = E.CONFIG.vehicleColor})
+                    if obj:FindFirstChildWhichIsA("VehicleSeat", true) then
+                        table.insert(list, {model = obj, name = obj.Name, color = E.CONFIG.vehicleColor})
                     end
                 end
             end
@@ -3720,7 +3840,7 @@ do
                         if p.Character == obj then isPlayerChar = true; break end
                     end
                     if humanoid and not isPlayerChar then
-                        table.insert(list, {model = obj, type = "npc", name = obj.Name, color = E.CONFIG.npcColor})
+                        table.insert(list, {model = obj, name = obj.Name, color = E.CONFIG.npcColor})
                     end
                 end
             end
@@ -3741,12 +3861,9 @@ do
             currentSet[model] = true
             local data = createESPFor(model, target.color)
 
-            local pos
             local primary = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
-            if primary then pos = primary.Position end
-
-            if pos then
-                local dist = (pos - myPos).Magnitude
+            if primary then
+                local dist = (primary.Position - myPos).Magnitude
                 if dist > E.CONFIG.maxDistance then
                     if data.billboard then data.billboard.Enabled = false end
                     if data.box then data.box.Visible = false end
@@ -3812,27 +3929,13 @@ do
         end
     end
 
-    function E.setShowPlayers(on) E.CONFIG.showPlayers = on end
+    function E.setShowPlayers(on)  E.CONFIG.showPlayers = on end
     function E.setShowVehicles(on) E.CONFIG.showVehicles = on end
-    function E.setShowNPCs(on) E.CONFIG.showNPCs = on end
-    function E.setShowBox(on) E.CONFIG.showBox = on; clearAll() end
-    function E.setShowName(on) E.CONFIG.showName = on; clearAll() end
+    function E.setShowNPCs(on)     E.CONFIG.showNPCs = on end
+    function E.setShowBox(on)      E.CONFIG.showBox = on; clearAll() end
+    function E.setShowName(on)     E.CONFIG.showName = on; clearAll() end
     function E.setShowDistance(on) E.CONFIG.showDistance = on; clearAll() end
-    function E.setShowHealth(on) E.CONFIG.showHealth = on; clearAll() end
-
-    function E.getConfig()
-        return {
-            enabled = E.CONFIG.enabled,
-            showPlayers = E.CONFIG.showPlayers,
-            showVehicles = E.CONFIG.showVehicles,
-            showNPCs = E.CONFIG.showNPCs,
-            showBox = E.CONFIG.showBox,
-            showName = E.CONFIG.showName,
-            showDistance = E.CONFIG.showDistance,
-            showHealth = E.CONFIG.showHealth,
-            maxDistance = E.CONFIG.maxDistance,
-        }
-    end
+    function E.setShowHealth(on)   E.CONFIG.showHealth = on; clearAll() end
 
     E.clearAll = clearAll
     _G.XiaoHeiYuESP = E
@@ -3840,18 +3943,18 @@ do
 end
 
 -- ============================================================
--- 🚗 DLC-2 · 车辆飞行跳跃模块
+-- [ 33 ] DLC-2 · 车辆飞行跳跃
 -- 接口：_G.XiaoHeiYuFly
 -- ============================================================
 do
     local F = {}
     F.CONFIG = {
-        flyEnabled = false,
-        flySpeed = 8,
-        flyHeight = 200,
-        jumpEnabled = false,
-        jumpPower = 120,
-        noGravity = false,
+        flyEnabled   = false,
+        flySpeed     = 8,
+        flyHeight    = 200,
+        jumpEnabled  = false,
+        jumpPower    = 120,
+        noGravity    = false,
     }
 
     local flyThread = nil
@@ -3880,8 +3983,7 @@ do
                                     part.AssemblyLinearVelocity = Vector3.new(
                                         part.AssemblyLinearVelocity.X,
                                         F.CONFIG.flySpeed,
-                                        part.AssemblyLinearVelocity.Z
-                                    )
+                                        part.AssemblyLinearVelocity.Z)
                                 end)
                             end
                         end
@@ -3919,13 +4021,11 @@ do
                 local veh = getVehicleModel()
                 if veh then
                     for _, part in ipairs(veh:GetDescendants()) do
-                        if part:IsA("BasePart") and not part.Anchored then
-                            if part:IsA("VehicleSeat") then
-                                pcall(function()
-                                    part.AssemblyLinearVelocity = part.AssemblyLinearVelocity
-                                        + Vector3.new(0, F.CONFIG.jumpPower, 0)
-                                end)
-                            end
+                        if part:IsA("VehicleSeat") and not part.Anchored then
+                            pcall(function()
+                                part.AssemblyLinearVelocity = part.AssemblyLinearVelocity
+                                    + Vector3.new(0, F.CONFIG.jumpPower, 0)
+                            end)
                         end
                     end
                 end
@@ -3939,9 +4039,7 @@ do
         if veh then
             for _, part in ipairs(veh:GetDescendants()) do
                 if part:IsA("BasePart") and not part.Anchored then
-                    pcall(function()
-                        part.GravityScale = on and 0 or 1
-                    end)
+                    pcall(function() part.GravityScale = on and 0 or 1 end)
                 end
             end
         end
@@ -3953,31 +4051,21 @@ do
         F.setNoGravity(false)
     end
 
-    F.getConfig = function()
-        return {
-            flyEnabled = F.CONFIG.flyEnabled,
-            flySpeed = F.CONFIG.flySpeed,
-            jumpEnabled = F.CONFIG.jumpEnabled,
-            jumpPower = F.CONFIG.jumpPower,
-            noGravity = F.CONFIG.noGravity,
-        }
-    end
-
     _G.XiaoHeiYuFly = F
     print("[小黑鱼 DLC] 车辆飞行跳跃模块已加载")
 end
 
 -- ============================================================
--- 🔫 DLC-3 · 子弹模块（追踪 + 穿墙 + 无后坐力）
+-- [ 34 ] DLC-3 · 子弹模块
 -- 接口：_G.XiaoHeiYuBullet
 -- ============================================================
 do
     local B = {}
     B.CONFIG = {
-        trackEnabled = false,
-        pierceEnabled = false,
-        noRecoilEnabled = false,
-        trackRange = 500,
+        trackEnabled     = false,
+        pierceEnabled    = false,
+        noRecoilEnabled  = false,
+        trackRange       = 500,
     }
 
     local trackThread = nil
@@ -4090,19 +4178,12 @@ do
         local camera = workspace.CurrentCamera
         if not camera then return end
         if on then
-            pcall(function()
-                camera.CameraType = Enum.CameraType.Custom
-            end)
+            pcall(function() camera.CameraType = Enum.CameraType.Custom end)
             if B._recoilConn then B._recoilConn:Disconnect() end
             B._recoilConn = RunService.RenderStepped:Connect(function()
                 if not B.CONFIG.noRecoilEnabled then return end
-                local char = player.Character
-                if not char then return end
-                local humanoid = char:FindFirstChildOfClass("Humanoid")
-                if humanoid then
-                    if camera.CameraType ~= Enum.CameraType.Custom then
-                        camera.CameraType = Enum.CameraType.Custom
-                    end
+                if camera.CameraType ~= Enum.CameraType.Custom then
+                    camera.CameraType = Enum.CameraType.Custom
                 end
             end)
         else
@@ -4116,28 +4197,12 @@ do
         B.setNoRecoil(false)
     end
 
-    B.getConfig = function()
-        return {
-            trackEnabled = B.CONFIG.trackEnabled,
-            pierceEnabled = B.CONFIG.pierceEnabled,
-            noRecoilEnabled = B.CONFIG.noRecoilEnabled,
-            trackRange = B.CONFIG.trackRange,
-        }
-    end
-
     _G.XiaoHeiYuBullet = B
     print("[小黑鱼 DLC] 子弹模块已加载")
 end
 
 -- ============================================================
--- [第 4A/5 条结束] 下一段：更多刷钱职业 + DLC 面板 + A7 检测 + A7 检测面板 + 完成
--- ============================================================
--- ============================================================
--- [续接第 4A/5 条 · 第 4B/5 条]
--- ============================================================
-
--- ============================================================
--- 💰 DLC-4 · 更多刷钱职业
+-- [ 35 ] DLC-4 · 更多刷钱职业
 -- 接口：_G.XiaoHeiYuJobs
 -- ============================================================
 do
@@ -4166,7 +4231,8 @@ do
         for _, gui in ipairs(pg:GetDescendants()) do
             if (gui:IsA("TextButton") or gui:IsA("ImageButton")) and gui.Visible and not gui:IsDescendantOf(screenGui) then
                 local txt = ""
-                if gui:IsA("TextButton") then txt = gui.Text
+                if gui:IsA("TextButton") then
+                    txt = gui.Text
                 else
                     local tl = gui:FindFirstChildWhichIsA("TextLabel", true)
                     if tl then txt = tl.Text end
@@ -4249,140 +4315,7 @@ do
 end
 
 -- ============================================================
--- 🎛 DLC 悬浮控制台（右侧）
--- ============================================================
-do
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "XiaoHeiYu_DLC_Panel"
-    gui.ResetOnSpawn = false
-    gui.IgnoreGuiInset = true
-    gui.Parent = playerGui
-
-    local panel = Instance.new("Frame")
-    panel.Size = UDim2.new(0, 220, 0, 440)
-    panel.Position = UDim2.new(1, -240, 0.5, -220)
-    panel.BackgroundColor3 = Color3.fromRGB(22, 26, 34)
-    panel.BackgroundTransparency = 0.05
-    panel.BorderSizePixel = 0
-    panel.Active = true
-    panel.Draggable = true
-    panel.Parent = gui
-    Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 10)
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(120, 80, 255)
-    stroke.Thickness = 1.5
-    stroke.Transparency = 0.4
-    stroke.Parent = panel
-
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 30)
-    title.BackgroundTransparency = 1
-    title.Text = "🎁 DLC 控制台"
-    title.TextColor3 = Color3.fromRGB(180, 150, 255)
-    title.TextSize = 13
-    title.Font = Enum.Font.GothamBold
-    title.Parent = panel
-
-    local list = Instance.new("ScrollingFrame")
-    list.Size = UDim2.new(1, -16, 1, -40)
-    list.Position = UDim2.new(0, 8, 0, 34)
-    list.BackgroundTransparency = 1
-    list.BorderSizePixel = 0
-    list.ScrollBarThickness = 3
-    list.CanvasSize = UDim2.new(0, 0, 0, 0)
-    list.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    list.Parent = panel
-    Instance.new("UIListLayout", list).Padding = UDim.new(0, 6)
-
-    local function mkBtn(text, cb, color)
-        local b = Instance.new("TextButton")
-        b.Size = UDim2.new(1, 0, 0, 30)
-        b.BackgroundColor3 = color or Color3.fromRGB(40, 44, 58)
-        b.BackgroundTransparency = 0.15
-        b.Text = text
-        b.TextColor3 = Color3.fromRGB(230, 230, 240)
-        b.TextSize = 11
-        b.Font = Enum.Font.GothamBold
-        b.AutoButtonColor = true
-        b.Parent = list
-        Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
-        b.Activated:Connect(cb)
-        return b
-    end
-
-    mkBtn("🎯 ESP: 关", function(self)
-        local on = not _G.XiaoHeiYuESP.CONFIG.enabled
-        _G.XiaoHeiYuESP.setEnabled(on)
-        self.Text = "🎯 ESP: " .. (on and "开" or "关")
-    end, Color3.fromRGB(60, 80, 100))
-    mkBtn("🎯 ESP 仅玩家", function()
-        _G.XiaoHeiYuESP.setShowVehicles(false)
-        _G.XiaoHeiYuESP.setShowNPCs(false)
-        _G.XiaoHeiYuESP.setShowPlayers(true)
-        _G.XiaoHeiYuESP.setEnabled(true)
-    end)
-    mkBtn("🚗 车辆飞行: 关", function(self)
-        local on = not _G.XiaoHeiYuFly.CONFIG.flyEnabled
-        _G.XiaoHeiYuFly.setFlyEnabled(on)
-        self.Text = "🚗 车辆飞行: " .. (on and "开" or "关")
-    end, Color3.fromRGB(60, 100, 70))
-    mkBtn("🚗 车辆跳跃: 关", function(self)
-        local on = not _G.XiaoHeiYuFly.CONFIG.jumpEnabled
-        _G.XiaoHeiYuFly.setJumpEnabled(on)
-        self.Text = "🚗 车辆跳跃: " .. (on and "开" or "关")
-    end, Color3.fromRGB(60, 100, 70))
-    mkBtn("🔫 子弹追踪: 关", function(self)
-        local on = not _G.XiaoHeiYuBullet.CONFIG.trackEnabled
-        _G.XiaoHeiYuBullet.setTrackEnabled(on)
-        self.Text = "🔫 子弹追踪: " .. (on and "开" or "关")
-    end, Color3.fromRGB(100, 60, 60))
-    mkBtn("🔫 穿墙: 关", function(self)
-        local on = not _G.XiaoHeiYuBullet.CONFIG.pierceEnabled
-        _G.XiaoHeiYuBullet.setPierceEnabled(on)
-        self.Text = "🔫 穿墙: " .. (on and "开" or "关")
-    end, Color3.fromRGB(100, 60, 60))
-    mkBtn("💰 外卖", function()
-        local a = _G.XiaoHeiYuJobs.getActive()
-        _G.XiaoHeiYuJobs.setJob("food", not (table.find(a, "food") ~= nil))
-    end, Color3.fromRGB(100, 80, 50))
-    mkBtn("💰 拖车", function()
-        local a = _G.XiaoHeiYuJobs.getActive()
-        _G.XiaoHeiYuJobs.setJob("tow", not (table.find(a, "tow") ~= nil))
-    end, Color3.fromRGB(100, 80, 50))
-    mkBtn("💰 警车", function()
-        local a = _G.XiaoHeiYuJobs.getActive()
-        _G.XiaoHeiYuJobs.setJob("police", not (table.find(a, "police") ~= nil))
-    end, Color3.fromRGB(100, 80, 50))
-    mkBtn("💰 垃圾车", function()
-        local a = _G.XiaoHeiYuJobs.getActive()
-        _G.XiaoHeiYuJobs.setJob("garbage", not (table.find(a, "garbage") ~= nil))
-    end, Color3.fromRGB(100, 80, 50))
-    mkBtn("💰 消防车", function()
-        local a = _G.XiaoHeiYuJobs.getActive()
-        _G.XiaoHeiYuJobs.setJob("firetruck", not (table.find(a, "firetruck") ~= nil))
-    end, Color3.fromRGB(100, 80, 50))
-    mkBtn("💰 公交检查", function()
-        local a = _G.XiaoHeiYuJobs.getActive()
-        _G.XiaoHeiYuJobs.setJob("bus_check", not (table.find(a, "bus_check") ~= nil))
-    end, Color3.fromRGB(100, 80, 50))
-    mkBtn("❌ 全部 DLC 关闭", function()
-        if _G.XiaoHeiYuESP then _G.XiaoHeiYuESP.setEnabled(false) end
-        if _G.XiaoHeiYuFly then _G.XiaoHeiYuFly.stopAll() end
-        if _G.XiaoHeiYuBullet then _G.XiaoHeiYuBullet.stopAll() end
-        if _G.XiaoHeiYuJobs then
-            for _, k in ipairs(_G.XiaoHeiYuJobs.getActive()) do
-                _G.XiaoHeiYuJobs.setJob(k, false)
-            end
-        end
-        Log.add("○ DLC 全部关闭", "yellow")
-    end, Color3.fromRGB(120, 60, 60))
-
-    Log.add("🎁 DLC 控制台已加载（右侧面板）", "blue")
-end
-
--- ============================================================
--- 🛡 防封 A7 · 增强检测模块
+-- [ 36 ] 防封 A7 · 增强检测模块
 -- 接口：_G.XiaoHeiYuGuard
 -- ============================================================
 do
@@ -4390,10 +4323,13 @@ do
     G.CONFIG = {
         detectKick = true, detectRemote = true, detectScript = true,
         detectSpeed = true, detectTeleport = true, detectHealth = true, detectMarked = true,
-        speedThreshold = 250, teleportDistThreshold = 500,
-        teleportFreqThreshold = 5, healthDropThreshold = 80,
-        autoEmergencyStop = true, emergencyCooldown = 3,
-        showPanel = true, maxLogs = 30,
+        speedThreshold          = 250,
+        teleportDistThreshold   = 500,
+        teleportFreqThreshold   = 5,
+        healthDropThreshold     = 80,
+        autoEmergencyStop       = true,
+        emergencyCooldown       = 3,
+        maxLogs                 = 30,
     }
     G.events = {}
     G.lastEmergency = 0
@@ -4401,9 +4337,8 @@ do
     G.teleportHistory = {}
 
     local function pushEvent(text, level)
-        table.insert(G.events, 1, {time=os.date("%H:%M:%S"), text=text, level=level or "gray"})
+        table.insert(G.events, 1, {time = os.date("%H:%M:%S"), text = text, level = level or "gray"})
         if #G.events > G.CONFIG.maxLogs then table.remove(G.events) end
-        if _G.__xhy_a7_refresh then pcall(_G.__xhy_a7_refresh) end
     end
     G.pushEvent = pushEvent
 
@@ -4442,7 +4377,9 @@ do
         end)
         pcall(function()
             Players.PlayerRemoving:Connect(function(p)
-                if p == player then pushEvent("🔔 检测到你被移出服务器", "red") end
+                if p == player then
+                    pushEvent("🔔 检测到你被移出服务器", "red")
+                end
             end)
         end)
     end
@@ -4619,6 +4556,7 @@ do
             markedWarn = G.stats.markedWarn,
         }
     end
+
     G.getEvents = function() return G.events end
 
     _G.XiaoHeiYuGuard = G
@@ -4626,154 +4564,17 @@ do
 end
 
 -- ============================================================
--- 🛡 A7 检测面板（左下角）
+-- [ 37 ] 启动时自动启用防封基础项
 -- ============================================================
-do
-    local G = _G.XiaoHeiYuGuard
-    if not G then return end
-
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "XiaoHeiYu_GuardPanel"
-    gui.ResetOnSpawn = false
-    gui.IgnoreGuiInset = true
-    gui.Parent = playerGui
-
-    local panel = Instance.new("Frame")
-    panel.Size = UDim2.new(0, 260, 0, 320)
-    panel.Position = UDim2.new(0, 20, 1, -340)
-    panel.BackgroundColor3 = Color3.fromRGB(18, 20, 28)
-    panel.BackgroundTransparency = 0.05
-    panel.BorderSizePixel = 0
-    panel.Active = true
-    panel.Draggable = true
-    panel.Parent = gui
-    Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 10)
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(255, 200, 100)
-    stroke.Thickness = 1.5
-    stroke.Transparency = 0.4
-    stroke.Parent = panel
-
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 30)
-    title.BackgroundTransparency = 1
-    title.Text = "🛡 A7 检测面板"
-    title.TextColor3 = Color3.fromRGB(255, 200, 100)
-    title.TextSize = 13
-    title.Font = Enum.Font.GothamBold
-    title.Parent = panel
-
-    local statsLabel = Instance.new("TextLabel")
-    statsLabel.Size = UDim2.new(1, -16, 0, 80)
-    statsLabel.Position = UDim2.new(0, 8, 0, 32)
-    statsLabel.BackgroundColor3 = Color3.fromRGB(30, 32, 42)
-    statsLabel.BackgroundTransparency = 0.3
-    statsLabel.BorderSizePixel = 0
-    statsLabel.Text = ""
-    statsLabel.TextColor3 = Color3.fromRGB(200, 200, 220)
-    statsLabel.TextSize = 11
-    statsLabel.Font = Enum.Font.Code
-    statsLabel.TextXAlignment = Enum.TextXAlignment.Left
-    statsLabel.TextYAlignment = Enum.TextYAlignment.Top
-    statsLabel.Parent = panel
-    Instance.new("UICorner", statsLabel).CornerRadius = UDim.new(0, 6)
-
-    local logLabel = Instance.new("TextLabel")
-    logLabel.Size = UDim2.new(1, -16, 0, 140)
-    logLabel.Position = UDim2.new(0, 8, 0, 118)
-    logLabel.BackgroundColor3 = Color3.fromRGB(30, 32, 42)
-    logLabel.BackgroundTransparency = 0.3
-    logLabel.BorderSizePixel = 0
-    logLabel.Text = ""
-    logLabel.TextColor3 = Color3.fromRGB(200, 200, 220)
-    logLabel.TextSize = 10
-    logLabel.Font = Enum.Font.Code
-    logLabel.TextXAlignment = Enum.TextXAlignment.Left
-    logLabel.TextYAlignment = Enum.TextYAlignment.Top
-    logLabel.TextWrapped = true
-    logLabel.Parent = panel
-    Instance.new("UICorner", logLabel).CornerRadius = UDim.new(0, 6)
-
-    local btnRow = Instance.new("Frame")
-    btnRow.Size = UDim2.new(1, -16, 0, 40)
-    btnRow.Position = UDim2.new(0, 8, 1, -48)
-    btnRow.BackgroundTransparency = 1
-    btnRow.Parent = panel
-
-    local function refresh()
-        local s = G.getStats()
-        statsLabel.Text = string.format(
-            "🛡 实时统计\n" ..
-            "  · 被踢: %d\n" ..
-            "  · 可疑Remote: %d\n" ..
-            "  · 可疑脚本: %d\n" ..
-            "  · 速度异常: %d\n" ..
-            "  · 传送异常: %d\n" ..
-            "  · 血量异常: %d\n" ..
-            "  · 被标记: %d",
-            s.kickCount, s.remoteSuspicious, s.scriptSuspicious,
-            s.speedWarn, s.teleportWarn, s.healthWarn, s.markedWarn)
-
-        local lines = {}
-        for i = 1, math.min(8, #G.events) do
-            local e = G.events[i]
-            table.insert(lines, string.format("[%s] %s", e.time, e.text))
-        end
-        if #lines == 0 then lines = {"等待事件..."} end
-        logLabel.Text = table.concat(lines, "\n")
-    end
-    _G.__xhy_a7_refresh = refresh
-    refresh()
-
-    local clearBtn = Instance.new("TextButton")
-    clearBtn.Size = UDim2.new(0.5, -3, 1, 0)
-    clearBtn.Position = UDim2.new(0, 0, 0, 0)
-    clearBtn.BackgroundColor3 = Color3.fromRGB(60, 80, 100)
-    clearBtn.BackgroundTransparency = 0.2
-    clearBtn.Text = "🧹 清空日志"
-    clearBtn.TextColor3 = Color3.fromRGB(230, 230, 240)
-    clearBtn.TextSize = 11
-    clearBtn.Font = Enum.Font.GothamBold
-    clearBtn.Parent = btnRow
-    Instance.new("UICorner", clearBtn).CornerRadius = UDim.new(0, 6)
-    clearBtn.Activated:Connect(function()
-        G.events = {}
-        refresh()
-    end)
-
-    local stopBtn = Instance.new("TextButton")
-    stopBtn.Size = UDim2.new(0.5, -3, 1, 0)
-    stopBtn.Position = UDim2.new(0.5, 3, 0, 0)
-    stopBtn.BackgroundColor3 = Color3.fromRGB(120, 60, 60)
-    stopBtn.BackgroundTransparency = 0.2
-    stopBtn.Text = "🚨 手动熔断"
-    stopBtn.TextColor3 = Color3.fromRGB(255, 230, 230)
-    stopBtn.TextSize = 11
-    stopBtn.Font = Enum.Font.GothamBold
-    stopBtn.Parent = btnRow
-    Instance.new("UICorner", stopBtn).CornerRadius = UDim.new(0, 6)
-    stopBtn.Activated:Connect(function()
-        G.CONFIG.autoEmergencyStop = true
-        G.emergencyStop("手动触发")
-        refresh()
-    end)
-
-    task.spawn(function()
-        while true do
-            task.wait(1)
-            pcall(refresh)
-        end
-    end)
-
-    Log.add("🛡 A7 检测面板已加载（左下角）", "green")
+if _G.XiaoHeiYuAntiBan then
+    pcall(function() _G.XiaoHeiYuAntiBan.startHeartbeatJitter() end)
 end
 
 -- ============================================================
--- ✅ 完整版 A7 全部加载完成
+-- ✅ 完整版 A7（优化版）全部加载完成
 -- ============================================================
-Log.add("🎉 小黑鱼 A6+A7 全部加载完成", "green")
-print("[小黑鱼] 完整版 A7 已全部加载")
+Log.add("🎉 小黑鱼 A6 + A7 全部加载完成", "green")
+print("[小黑鱼] 完整版 A7（优化版）已全部加载")
 print("  · _G.XiaoHeiYuAntiBan  - 防封 A6")
 print("  · _G.XiaoHeiYuTeleport  - 传送")
 print("  · _G.XiaoHeiYuStealth   - 隐蔽引擎")
